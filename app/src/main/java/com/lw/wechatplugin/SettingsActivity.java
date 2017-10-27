@@ -27,14 +27,6 @@ public class SettingsActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             mSettingsFragment = new SettingsFragment();
             replaceFragment(R.id.settings_container, mSettingsFragment);
-            List<WxContactVo> wxContactVoList = WxUtils.getInstance().fetchPublicAccountList(this);
-            if(wxContactVoList != null && wxContactVoList.size() > 0){
-                for(int i=0;i<wxContactVoList.size();i++){
-                    Log.d("Setting", wxContactVoList.get(i).toString());
-                }
-            }else{
-                Log.d("Setting", "wxContact read null=====================");
-            }
         }
 
     }

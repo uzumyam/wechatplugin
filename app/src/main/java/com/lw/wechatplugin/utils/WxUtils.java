@@ -10,10 +10,10 @@ import net.sqlcipher.Cursor;
 import net.sqlcipher.database.SQLiteDatabase;
 import net.sqlcipher.database.SQLiteDatabaseHook;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
 import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.File;
@@ -44,10 +44,11 @@ public class WxUtils {
 
     private List<File> mWxDbPathList = new ArrayList<File>();
 
+    List<WxContactVo> contactVoList = new ArrayList<>();
+
     private static WxUtils instance;
 
     private WxUtils(){
-
     }
 
     public static WxUtils getInstance(){
@@ -72,26 +73,19 @@ public class WxUtils {
         XmlPullParserFactory factory;
         if (descFile.exists()) {
             try {
-                factory = XmlPullParserFactory.newInstance();
-                factory.setNamespaceAware(true);
-                XmlPullParser xmlPullParser = factory.newPullParser();
-                xmlPullParser.setInput(new FileInputStream(descFile), "utf-8");
-                int v = xmlPullParser.getEventType();
-                while (v != XmlPullParser.END_DOCUMENT) {
-                    if (v == XmlPullParser.START_TAG) {
-                        if (xmlPullParser.getName().equals("_auth_uin")) {
-                            xmlPullParser.nextToken();
-                            Log.i(TAG, "uin=============" + xmlPullParser.getText());
-                            return xmlPullParser.getText();
-                        }
+                SAXReader saxReader = new SAXReader();
+                Document document = saxReader.read(new FileInputStream(descFile));
+                Element root = document.getRootElement();
+                List<Element> elements = root.elements();
+                for (Element element : elements) {
+                    if ("_auth_uin".equals(element.attributeValue("name"))) {
+                        mCurrWxUin = element.attributeValue("value");
+                        break;
                     }
-                    v = xmlPullParser.next();
                 }
-            } catch (XmlPullParserException e) {
-                e.printStackTrace();
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-            } catch (IOException e) {
+            }  catch (DocumentException e) {
                 e.printStackTrace();
                 Log.i(TAG, "获取微信uid失败，请检查auth_info_key_prefs文件权限");
             }
@@ -134,8 +128,7 @@ public class WxUtils {
         return password;
     }
 
-    public List<WxContactVo> fetchPublicAccountList(Context context){
-        List<WxContactVo> contactVoList = new ArrayList<>();
+    public void fetchPublicAccountList(Context context){
 
         String password = getDbPassword(CommonUtils.getDeviceId(context), getUIN());
         Log.i("wechat", "======== password = " + password);
@@ -143,11 +136,11 @@ public class WxUtils {
         searchDBFile(WX_DB_DIR_PATH);
 
         if(mWxDbPathList.isEmpty()) {
-            return contactVoList;
+            return ;
         }
 
         File databaseFile = mWxDbPathList.get(0);
-
+        SQLiteDatabase.loadLibs(context);
         SQLiteDatabaseHook hook = new SQLiteDatabaseHook(){
             public void preKey(SQLiteDatabase database){
             }
@@ -182,12 +175,13 @@ public class WxUtils {
             if(db!=null){
                 db.close();
             }
-
             if(cursor!=null){
                 cursor.close();
             }
         }
+    }
 
+    public List<WxContactVo> getContactVoList(){
         return contactVoList;
     }
 

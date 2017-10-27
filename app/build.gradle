@@ -19,7 +19,7 @@ android {
     buildTypes {
         release {
 //            signingConfig signingConfigs.release
-            minifyEnabled true
+            minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -30,5 +30,6 @@ dependencies {
     provided files('libs/XposedBridgeApi-82.jar')
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
+    compile files('libs/dom4j-full.jar')
 }
 

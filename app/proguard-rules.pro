@@ -18,3 +18,4 @@
 
 -keep class com.lw.wechatplugin.* { *; }
 -dontwarn okio.**
+-dontwarn org.dom4j.**

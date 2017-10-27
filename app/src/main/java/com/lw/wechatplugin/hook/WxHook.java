@@ -51,20 +51,9 @@ public class WxHook {
 
     private e q;
 
-    private List<WxContactVo> wxContactVoList;
-
     public WxHook(Context context, String versionName) {
         this.context = context;
         q = new e(VersionParam.WECHAT_PACKAGE_NAME, versionName);
-        wxContactVoList = WxUtils.getInstance().fetchPublicAccountList(context);
-        if(wxContactVoList != null && wxContactVoList.size() > 0){
-            for(int i=0;i<wxContactVoList.size();i++){
-                XposedBridge.log(wxContactVoList.get(i).toString());
-            }
-        }else{
-            XposedBridge.log("wxContact read null=====================");
-        }
-
     }
 
     /**
