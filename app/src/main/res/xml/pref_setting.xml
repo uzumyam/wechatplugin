@@ -1,0 +1,83 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="@string/setting">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="open_lucky_money"
+            android:title="@string/pref_open" />
+
+
+        <!--<SwitchPreference-->
+            <!--android:defaultValue="false"-->
+            <!--android:dependency="open"-->
+            <!--android:key="not_self"-->
+            <!--android:title="@string/pre_not_self" />-->
+
+        <!--<SwitchPreference-->
+            <!--android:defaultValue="false"-->
+            <!--android:dependency="open"-->
+            <!--android:key="not_whisper"-->
+            <!--android:title="@string/pref_whisper" />-->
+
+        <!--<EditTextPreference-->
+            <!--android:dependency="open"-->
+            <!--android:hint="@string/not_contains_hit"-->
+            <!--android:key="not_contains"-->
+            <!--android:title="@string/not_contains" />-->
+
+        <!--<SwitchPreference-->
+            <!--android:defaultValue="false"-->
+            <!--android:dependency="open"-->
+            <!--android:key="delay"-->
+            <!--android:title="@string/pref_delay" />-->
+
+        <!--<com.lw.wechatplugin.RangePreference-->
+            <!--end="delay_max"-->
+            <!--start="delay_min"-->
+            <!--android:defaultValue="true"-->
+            <!--android:dependency="delay"-->
+            <!--android:title="@string/pref_delay_time" />-->
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="auto_reply"
+            android:title="自动回复" />
+
+        <SwitchPreference
+            android:dependency="auto_reply"
+            android:defaultValue="false"
+            android:key="robot_reply"
+            android:title="智能回复" />
+
+        <SwitchPreference
+            android:dependency="auto_reply"
+            android:defaultValue="true"
+            android:key="fixed_reply"
+            android:title="固定词语回复" />
+
+        <EditTextPreference
+            android:dependency="fixed_reply"
+            android:hint="@string/reply_set_hint"
+            android:key="reply_msg"
+            android:title="设置回复语" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="auto_receipt"
+            android:title="自动收款" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="auto_transfer"
+            android:title="自动转账" />
+
+        <EditTextPreference
+            android:dependency="auto_transfer"
+            android:hint="@string/tranfer_hit"
+            android:key="transfer_setting"
+            android:inputType="numberPassword"
+            android:title="设置转账密码" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
