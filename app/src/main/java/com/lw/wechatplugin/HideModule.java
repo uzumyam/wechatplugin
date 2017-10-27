@@ -129,6 +129,6 @@ public class HideModule {
     }
 
     private boolean isTarget(String name) {
-        return name.contains("com.lw") || name.contains("xposed");
+        return name.contains("xposed");
     }
 }
