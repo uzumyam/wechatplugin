@@ -3,18 +3,17 @@ package com.lw.wechatplugin;
 
 import android.annotation.TargetApi;
 import android.app.FragmentManager;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.EditTextPreference;
-import android.preference.Preference;
-import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceFragment;
-import android.preference.SwitchPreference;
 import android.support.v7.app.AppCompatActivity;
-import android.text.InputType;
-import android.widget.Toast;
+import android.util.Log;
+
+import com.lw.wechatplugin.utils.WxUtils;
+import com.lw.wechatplugin.vo.WxContactVo;
+
+import java.util.List;
+
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -28,6 +27,14 @@ public class SettingsActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             mSettingsFragment = new SettingsFragment();
             replaceFragment(R.id.settings_container, mSettingsFragment);
+            List<WxContactVo> wxContactVoList = WxUtils.getInstance().fetchPublicAccountList(this);
+            if(wxContactVoList != null && wxContactVoList.size() > 0){
+                for(int i=0;i<wxContactVoList.size();i++){
+                    Log.d("Setting", wxContactVoList.get(i).toString());
+                }
+            }else{
+                Log.d("Setting", "wxContact read null=====================");
+            }
         }
 
     }
@@ -53,13 +60,14 @@ public class SettingsActivity extends AppCompatActivity {
 
 //            EditTextPreference editPref = (EditTextPreference) findPreference("transfer_setting");
 //            editPref.getEditText().setInputType(InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    String str = CommonUtils.getTulingReply("你好啊");
-                    System.out.println(str);
-                }
-            }).start();
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    String str = CommonUtils.getTulingReply("你好啊");
+//                    System.out.println(str);
+//                }
+//            }).start();
+
         }
     }
 }

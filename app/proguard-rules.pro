@@ -16,5 +16,5 @@
 #   public *;
 #}
 
-#-keep class com.lw.wechatplugin.* { *; }
-#-dontwarn okio.**
+-keep class com.lw.wechatplugin.* { *; }
+-dontwarn okio.**

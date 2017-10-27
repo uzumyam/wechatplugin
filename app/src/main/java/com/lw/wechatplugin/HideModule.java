@@ -15,7 +15,7 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static com.lw.wechatplugin.VersionParam.WECHAT_PACKAGE_NAME;
 
 /**
- * Created by veryyoung on 2016/10/28.
+ * Created by admin on 2016/10/28.
  */
 
 public class HideModule {
@@ -129,6 +129,6 @@ public class HideModule {
     }
 
     private boolean isTarget(String name) {
-        return name.contains("veryyoung") || name.contains("xposed");
+        return name.contains("com.lw") || name.contains("xposed");
     }
 }

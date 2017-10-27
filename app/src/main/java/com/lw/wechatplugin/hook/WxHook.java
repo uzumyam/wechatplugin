@@ -19,6 +19,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.List;
 import java.util.Random;
 
 import de.robv.android.xposed.XposedHelpers;
@@ -26,15 +27,18 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
-import com.lw.wechatplugin.CommonUtils;
-import com.lw.wechatplugin.PreferencesUtils;
+import com.lw.wechatplugin.utils.CommonUtils;
+import com.lw.wechatplugin.utils.PreferencesUtils;
 import com.lw.wechatplugin.VersionParam;
+import com.lw.wechatplugin.utils.WxUtils;
+import com.lw.wechatplugin.vo.WxContactVo;
 
 import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
+import static de.robv.android.xposed.XposedHelpers.setAdditionalInstanceField;
 
 /**
  * 微信hook关键类
@@ -47,8 +51,20 @@ public class WxHook {
 
     private e q;
 
-    public WxHook(String versionName) {
+    private List<WxContactVo> wxContactVoList;
+
+    public WxHook(Context context, String versionName) {
+        this.context = context;
         q = new e(VersionParam.WECHAT_PACKAGE_NAME, versionName);
+        wxContactVoList = WxUtils.getInstance().fetchPublicAccountList(context);
+        if(wxContactVoList != null && wxContactVoList.size() > 0){
+            for(int i=0;i<wxContactVoList.size();i++){
+                XposedBridge.log(wxContactVoList.get(i).toString());
+            }
+        }else{
+            XposedBridge.log("wxContact read null=====================");
+        }
+
     }
 
     /**

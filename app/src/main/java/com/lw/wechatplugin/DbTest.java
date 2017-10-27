@@ -23,7 +23,7 @@ public class DbTest {
             byte[] values = messageDigest.digest();
             StringBuilder sb = new StringBuilder();
             for(int i=0;i<values.length;i++){
-                String c = Integer.toHexString(values[i]);
+                String c = Integer.toHexString(0xff & values[i]);
                 if(c.length() == 1){
                     sb.append("0").append(c);
                 }else{

@@ -1,24 +1,34 @@
-package com.lw.wechatplugin;
+package com.lw.wechatplugin.utils;
+
+import android.content.Context;
+import android.telephony.TelephonyManager;
+import android.util.Log;
+
+import com.lw.wechatplugin.VersionParam;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
-
-import com.lw.wechatplugin.vo.MessageReplyVo;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by admin on 2017/10/26.
  */
 
 public class CommonUtils {
+
+    public static final String TAG = "CommonUtils";
+
     /**
      * post网络请求
      * @param urlpost
@@ -97,5 +107,82 @@ public class CommonUtils {
             e.printStackTrace();
         }
         return "抱歉，暂时不能回复您";
+    }
+
+    public static String md5(String content){
+        MessageDigest messageDigest = null;
+        try {
+            messageDigest = MessageDigest.getInstance("MD5");
+            messageDigest.update(content.getBytes("utf-8"));
+            byte[] values = messageDigest.digest();
+            StringBuilder sb = new StringBuilder();
+            for(int i=0;i<values.length;i++){
+                String c = Integer.toHexString(0xff & values[i]);
+                if(c.length() == 1){
+                    sb.append("0").append(c);
+                }else{
+                    sb.append(c);
+                }
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String getDeviceId(Context context) {
+        TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        return tm.getDeviceId();
+    }
+
+    public static void commandCommonSU(final String command) {
+        boolean ret = false;
+        Process process = null;
+        DataOutputStream os = null;
+        BufferedReader is = null;
+        try {
+            Log.i(TAG, "start su");
+            process = Runtime.getRuntime().exec("su");
+
+            os = new DataOutputStream(process.getOutputStream());
+            Log.i(TAG, "command = " + command);
+            os.writeBytes(command + "\n");
+            os.flush();
+            os.writeBytes("exit\n");
+            os.flush();
+            ret = (process.waitFor() == 0);
+        } catch (Exception e) {
+            Log.w(TAG, e.getLocalizedMessage(), e);
+            ret = false;
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (Exception e) {
+                    Log.w(TAG, e.getLocalizedMessage(), e);
+                }
+            }
+            if (os != null) {
+                try {
+                    os.close();
+                } catch (Exception e) {
+                    Log.w(TAG, e.getLocalizedMessage(), e);
+                }
+            }
+            try {
+                process.destroy();
+            } catch (Exception e) {
+                Log.w(TAG, e.getLocalizedMessage(), e);
+            }
+        }
+        if (ret) {
+            Log.d(TAG, "Root SUC success!");
+        } else {
+            Log.d(TAG, "Root SUC fail!");
+        }
     }
 }

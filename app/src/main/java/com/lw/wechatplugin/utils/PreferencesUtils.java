@@ -1,4 +1,4 @@
-package com.lw.wechatplugin;
+package com.lw.wechatplugin.utils;
 
 
 import de.robv.android.xposed.XSharedPreferences;

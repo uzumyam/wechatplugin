@@ -5,6 +5,15 @@ public class VersionParam {
 
     public static final String WECHAT_PACKAGE_NAME = "com.tencent.mm";
 
+    public static final String WX_ROOT_PATH = "/data/data/com.tencent.mm/";
+    private static final String WX_DB_DIR_PATH = WX_ROOT_PATH + "MicroMsg";
+
+    private static final String WX_DB_FILE_NAME = "EnMicroMsg.db";
+
+    private static final String WX_SP_UIN_PATH = WX_ROOT_PATH + "shared_prefs/auth_info_key_prefs.xml";
+
+    private static final String localDbPath = WX_DB_DIR_PATH + "EnMicroMsg.db";
+
     public static final String TULING_API_URL = "http://www.tuling123.com/openapi/api";
     public static final String TULING_APPKEY = "7e918415cdfd4bcab042dd73a550c663";
     public static final String TULING_UID = "161409";
