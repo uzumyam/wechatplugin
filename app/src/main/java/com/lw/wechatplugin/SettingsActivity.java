@@ -9,6 +9,7 @@ import android.preference.PreferenceFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import com.lw.wechatplugin.utils.PreferencesUtils;
 import com.lw.wechatplugin.utils.WxUtils;
 import com.lw.wechatplugin.vo.WxContactVo;
 
@@ -37,7 +38,6 @@ public class SettingsActivity extends AppCompatActivity {
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction().replace(viewId, fragment).commit();
     }
-
 
     /**
      * A placeholder fragment containing a settings view.

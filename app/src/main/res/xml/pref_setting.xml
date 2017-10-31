@@ -6,38 +6,6 @@
             android:key="open_lucky_money"
             android:title="@string/pref_open" />
 
-
-        <!--<SwitchPreference-->
-            <!--android:defaultValue="false"-->
-            <!--android:dependency="open"-->
-            <!--android:key="not_self"-->
-            <!--android:title="@string/pre_not_self" />-->
-
-        <!--<SwitchPreference-->
-            <!--android:defaultValue="false"-->
-            <!--android:dependency="open"-->
-            <!--android:key="not_whisper"-->
-            <!--android:title="@string/pref_whisper" />-->
-
-        <!--<EditTextPreference-->
-            <!--android:dependency="open"-->
-            <!--android:hint="@string/not_contains_hit"-->
-            <!--android:key="not_contains"-->
-            <!--android:title="@string/not_contains" />-->
-
-        <!--<SwitchPreference-->
-            <!--android:defaultValue="false"-->
-            <!--android:dependency="open"-->
-            <!--android:key="delay"-->
-            <!--android:title="@string/pref_delay" />-->
-
-        <!--<com.lw.wechatplugin.RangePreference-->
-            <!--end="delay_max"-->
-            <!--start="delay_min"-->
-            <!--android:defaultValue="true"-->
-            <!--android:dependency="delay"-->
-            <!--android:title="@string/pref_delay_time" />-->
-
         <SwitchPreference
             android:defaultValue="true"
             android:key="auto_reply"

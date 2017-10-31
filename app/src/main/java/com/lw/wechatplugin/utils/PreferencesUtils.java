@@ -1,6 +1,8 @@
 package com.lw.wechatplugin.utils;
 
 
+import com.lw.wechatplugin.BuildConfig;
+
 import de.robv.android.xposed.XSharedPreferences;
 
 public class PreferencesUtils {
@@ -9,7 +11,7 @@ public class PreferencesUtils {
 
     private static XSharedPreferences getInstance() {
         if (instance == null) {
-            instance = new XSharedPreferences(PreferencesUtils.class.getPackage().getName());
+            instance = new XSharedPreferences(BuildConfig.APPLICATION_ID);
             instance.makeWorldReadable();
         } else {
             instance.reload();

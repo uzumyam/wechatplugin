@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.StrictMode;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -21,6 +24,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -32,6 +36,7 @@ import com.lw.wechatplugin.utils.PreferencesUtils;
 import com.lw.wechatplugin.VersionParam;
 import com.lw.wechatplugin.utils.WxUtils;
 import com.lw.wechatplugin.vo.WxContactVo;
+import com.lw.wechatplugin.vo.WxMessageVo;
 
 import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
@@ -47,14 +52,111 @@ import static de.robv.android.xposed.XposedHelpers.setAdditionalInstanceField;
 
 public class WxHook {
 
+    public static final int MSG_CODE = 0x101;
+
     Context context;
 
     private e q;
 
-    public WxHook(Context context, String versionName) {
-        this.context = context;
+    private LinkedBlockingDeque<WxMessageVo> blockingDeque = new LinkedBlockingDeque<>(500);
+
+    public WxHook(String versionName) {
         q = new e(VersionParam.WECHAT_PACKAGE_NAME, versionName);
+        startMessageLooperThread();
     }
+
+    public void startMessageLooperThread(){
+       new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true){
+                    try {
+                        WxMessageVo messageVo = blockingDeque.take();
+                        messageHandler.sendMessage(messageHandler.obtainMessage(MSG_CODE, messageVo));
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
+
+    public Handler messageHandler = new Handler(Looper.getMainLooper()){
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case MSG_CODE:
+                    WxMessageVo messageVo = (WxMessageVo) msg.obj;
+                    if(messageVo.getMessageType().intValue() == 436207665 || messageVo.getMessageType().intValue() == 469762097){   //收到红包
+                        if(PreferencesUtils.luckyMoneySet()){   //开启了自动收红包
+                            log("收到红包，跳转到红包页面=============== ");
+                            Toast.makeText(context, "收到红包，跳转到红包页面", Toast.LENGTH_SHORT).show();
+                            int i;
+                            String a = c(messageVo.getContent());
+                            Intent intent = new Intent();
+                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.luckymoney.ui.En_fba4b94f");
+                            if (messageVo.getTalker().endsWith("@chatroom")) {
+                                i = 0;
+                            } else {
+                                i = 1;
+                            }
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.putExtra("key_way", i);
+                            intent.putExtra("key_native_url", a);
+                            intent.putExtra("key_username", messageVo.getTalker());
+                            context.startActivity(intent);
+                        }
+                    }else if(messageVo.getMessageType().intValue() == 419430449) {  //收到转账
+                        if(PreferencesUtils.autoReceiptSet()){  //开启了自动收账
+                            log("收到转账，跳转到转账页面=============== ");
+                            Toast.makeText(context, "收到转账，跳转到转账页面", Toast.LENGTH_SHORT).show();
+                            String invalidTime = getFromXml(messageVo.getContent(), "invalidtime");
+                            String transactionId = getFromXml(messageVo.getContent(), "transcationid");
+                            String transferid = getFromXml(messageVo.getContent(), "transferid");
+                            String money = getFromXml(messageVo.getContent(), "feedesc");
+                            Intent intent = new Intent();
+                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI");
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.putExtra("invalid_time", invalidTime);
+                            intent.putExtra("transaction_id", transactionId);
+                            intent.putExtra("transfer_id", transferid);
+                            intent.putExtra("sender_name", messageVo.getTalker());
+                            Toast.makeText(context, "转账金额为 " + money, Toast.LENGTH_SHORT).show();
+                            context.startActivity(intent);
+                        }
+                    }else if(messageVo.getMessageType().intValue() == 1){   //文字聊天
+                        if(PreferencesUtils.autoReplySet()){    //开启了文字聊天自动回复
+                            log("收到文字聊天消息，跳转到聊天页面");
+                            Intent intent = new Intent();
+                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
+                            intent.putExtra("nofification_type", "new_msg_nofification");
+                            intent.putExtra("MainUI_User_Last_Msg_Type", messageVo.getMessageType());
+                            intent.putExtra("Intro_Is_Muti_Talker", false);
+                            intent.putExtra("Chat_User", messageVo.getTalker());
+                            intent.putExtra("Msg_Content", messageVo.getContent());   //自己添加的，用于回复的聊天内容
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            context.startActivity(intent);
+                        }
+                    }else if(messageVo.getMessageType().intValue() == 3){   //图片聊天，转账
+                        if(PreferencesUtils.autoTransferSet()){     //开启了自动转账
+                            Intent intent = new Intent();
+                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceUI");
+                            intent.putExtra("pay_scene", 31);
+                            intent.putExtra("pay_channel", 11);
+                            intent.putExtra("receiver_name", messageVo.getTalker());
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            context.startActivity(intent);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
     /**
      * 微信红包hook逻辑
@@ -77,78 +179,88 @@ public class WxHook {
                 log(" messageType=============== " + methodHookParam.args[2].toString());
                 //消息为自己发出的isSender为true,消息为别人发出的isSender为false
                 log(" isSender=============== " + methodHookParam.args[4].toString());
-                if (methodHookParam.args[2].toString().equals("436207665") || methodHookParam.args[2].toString().equals("469762097")) {   //接收到红包
-                    if(PreferencesUtils.luckyMoneySet()){   //开启了自动收红包
-                        log("收到红包，跳转到红包页面=============== ");
-                        Toast.makeText(context, "收到红包，跳转到红包页面", Toast.LENGTH_SHORT).show();
-                        int i;
-                        String a = c(methodHookParam.args[1].toString());
-                        Intent intent = new Intent();
-                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.luckymoney.ui.En_fba4b94f");
-                        if (methodHookParam.args[1].toString().endsWith("@chatroom")) {
-                            i = 0;
-                        } else {
-                            i = 1;
-                        }
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        intent.putExtra("key_way", i);
-                        intent.putExtra("key_native_url", a);
-                        intent.putExtra("key_username", methodHookParam.args[0].toString());
-                        context.startActivity(intent);
-                    }
-                } else if (methodHookParam.args[2].toString().equals("419430449")) {   //收到转账
-                    if(PreferencesUtils.autoReceiptSet()){  //开启了自动收账
-                        log("收到转账，跳转到转账页面=============== ");
-                        Toast.makeText(context, "收到转账，跳转到转账页面", Toast.LENGTH_SHORT).show();
-                        String invalidTime = getFromXml(methodHookParam.args[1].toString(), "invalidtime");
-                        String transactionId = getFromXml(methodHookParam.args[1].toString(), "transcationid");
-                        String transferid = getFromXml(methodHookParam.args[1].toString(), "transferid");
-                        String money = getFromXml(methodHookParam.args[1].toString(), "feedesc");
-                        Intent intent = new Intent();
-                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI");
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        intent.putExtra("invalid_time", invalidTime);
-                        intent.putExtra("transaction_id", transactionId);
-                        intent.putExtra("transfer_id", transferid);
-                        intent.putExtra("sender_name", methodHookParam.args[0].toString());
-                        Toast.makeText(context, "转账金额为 " + money, Toast.LENGTH_SHORT).show();
-                        context.startActivity(intent);
-                    }
-                } else if (methodHookParam.args[2].toString().equals("1")) {   //收到文字消息
-                    if(PreferencesUtils.autoReplySet()){    //开启了文字聊天自动回复
-                        log("收到文字聊天消息，跳转到聊天页面");
-                        Intent intent = new Intent();
-                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
-                        intent.putExtra("nofification_type", "new_msg_nofification");
-//					intent.putExtra("Intro_Bottle_unread_count", 0);
-                        intent.putExtra("MainUI_User_Last_Msg_Type", methodHookParam.args[2].toString());
-                        intent.putExtra("Intro_Is_Muti_Talker", false);
-                        intent.putExtra("Chat_User", methodHookParam.args[0].toString());
-                        intent.putExtra("Msg_Content", methodHookParam.args[1].toString());   //自己添加的，用于回复的聊天内容
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                        context.startActivity(intent);
-                    }
-//                    exec(new String[]{"am", "start", "-n", "com.tencent.mm/.ui.chatting.En_5b8fbb1e ", "-e", "Chat_User", methodHookParam.args[0].toString(), "Msg_Content", methodHookParam.args[1].toString(),
-//                            "--ei", "_auto_finish", "2000", "--user", String.valueOf(android.os.Process.myUserHandle().hashCode())});
 
-                            //直接回复消息
-//                    Object requestCaller = callStaticMethod(findClass(VersionParam.networkRequest, loadPackageParam.classLoader), VersionParam.getNetworkByModelMethod);
-//                    callMethod(requestCaller, "a", newInstance(findClass("com.tencent.mm.aj.a", loadPackageParam.classLoader), methodHookParam.args[0].toString(), "direct reply"),0);
-                } else if (methodHookParam.args[2].toString().equals("3")) {   //收到图片消息
-                    if(PreferencesUtils.autoTransferSet()){     //开启了自动转账
-                        Intent intent = new Intent();
-                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceUI");
-                        intent.putExtra("pay_scene", 31);
-                        intent.putExtra("pay_channel", 11);
-                        intent.putExtra("receiver_name", methodHookParam.args[0].toString());
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(intent);
-                    }
-                } else if (methodHookParam.args[2].toString().equals("34")) {  //收到语音消息
+                WxMessageVo wxMessageVo = new WxMessageVo();
+                wxMessageVo.setTalker(methodHookParam.args[0].toString());
+                wxMessageVo.setContent(methodHookParam.args[1].toString());
+                wxMessageVo.setMessageType(Integer.parseInt(methodHookParam.args[2].toString()));
+                wxMessageVo.setOther(Integer.parseInt(methodHookParam.args[3].toString()));
+                wxMessageVo.setSenderType(Boolean.parseBoolean(methodHookParam.args[4].toString()));
 
-                }
+                blockingDeque.put(wxMessageVo);
+
+//                if (methodHookParam.args[2].toString().equals("436207665") || methodHookParam.args[2].toString().equals("469762097")) {   //接收到红包
+//                    if(PreferencesUtils.luckyMoneySet()){   //开启了自动收红包
+//                        log("收到红包，跳转到红包页面=============== ");
+//                        Toast.makeText(context, "收到红包，跳转到红包页面", Toast.LENGTH_SHORT).show();
+//                        int i;
+//                        String a = c(methodHookParam.args[1].toString());
+//                        Intent intent = new Intent();
+//                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.luckymoney.ui.En_fba4b94f");
+//                        if (methodHookParam.args[0].toString().endsWith("@chatroom")) {
+//                            i = 0;
+//                        } else {
+//                            i = 1;
+//                        }
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                        intent.putExtra("key_way", i);
+//                        intent.putExtra("key_native_url", a);
+//                        intent.putExtra("key_username", methodHookParam.args[0].toString());
+//                        context.startActivity(intent);
+//                    }
+//                } else if (methodHookParam.args[2].toString().equals("419430449")) {   //收到转账
+//                    if(PreferencesUtils.autoReceiptSet()){  //开启了自动收账
+//                        log("收到转账，跳转到转账页面=============== ");
+//                        Toast.makeText(context, "收到转账，跳转到转账页面", Toast.LENGTH_SHORT).show();
+//                        String invalidTime = getFromXml(methodHookParam.args[1].toString(), "invalidtime");
+//                        String transactionId = getFromXml(methodHookParam.args[1].toString(), "transcationid");
+//                        String transferid = getFromXml(methodHookParam.args[1].toString(), "transferid");
+//                        String money = getFromXml(methodHookParam.args[1].toString(), "feedesc");
+//                        Intent intent = new Intent();
+//                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI");
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                        intent.putExtra("invalid_time", invalidTime);
+//                        intent.putExtra("transaction_id", transactionId);
+//                        intent.putExtra("transfer_id", transferid);
+//                        intent.putExtra("sender_name", methodHookParam.args[0].toString());
+//                        Toast.makeText(context, "转账金额为 " + money, Toast.LENGTH_SHORT).show();
+//                        context.startActivity(intent);
+//                    }
+//                } else if (methodHookParam.args[2].toString().equals("1")) {   //收到文字消息
+//                    if(PreferencesUtils.autoReplySet()){    //开启了文字聊天自动回复
+//                        log("收到文字聊天消息，跳转到聊天页面");
+//                        Intent intent = new Intent();
+//                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
+//                        intent.putExtra("nofification_type", "new_msg_nofification");
+////					intent.putExtra("Intro_Bottle_unread_count", 0);
+//                        intent.putExtra("MainUI_User_Last_Msg_Type", methodHookParam.args[2].toString());
+//                        intent.putExtra("Intro_Is_Muti_Talker", false);
+//                        intent.putExtra("Chat_User", methodHookParam.args[0].toString());
+//                        intent.putExtra("Msg_Content", methodHookParam.args[1].toString());   //自己添加的，用于回复的聊天内容
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+//                        context.startActivity(intent);
+//                    }
+////                    exec(new String[]{"am", "start", "-n", "com.tencent.mm/.ui.chatting.En_5b8fbb1e ", "-e", "Chat_User", methodHookParam.args[0].toString(), "Msg_Content", methodHookParam.args[1].toString(),
+////                            "--ei", "_auto_finish", "2000", "--user", String.valueOf(android.os.Process.myUserHandle().hashCode())});
+//
+//                            //直接回复消息
+////                    Object requestCaller = callStaticMethod(findClass(VersionParam.networkRequest, loadPackageParam.classLoader), VersionParam.getNetworkByModelMethod);
+////                    callMethod(requestCaller, "a", newInstance(findClass("com.tencent.mm.aj.a", loadPackageParam.classLoader), methodHookParam.args[0].toString(), "direct reply"),0);
+//                } else if (methodHookParam.args[2].toString().equals("3")) {   //收到图片消息
+//                    if(PreferencesUtils.autoTransferSet()){     //开启了自动转账
+//                        Intent intent = new Intent();
+//                        intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.plugin.remittance.ui.RemittanceUI");
+//                        intent.putExtra("pay_scene", 31);
+//                        intent.putExtra("pay_channel", 11);
+//                        intent.putExtra("receiver_name", methodHookParam.args[0].toString());
+//                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                        context.startActivity(intent);
+//                    }
+//                } else if (methodHookParam.args[2].toString().equals("34")) {  //收到语音消息
+//
+//                }
             }
         }});
 
