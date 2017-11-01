@@ -3,6 +3,7 @@ package com.lw.wechatplugin.hook;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,17 +21,21 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import cn.laobancha.www.weixinhooker.core.Sender;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
+
+import com.lw.wechatplugin.BuildConfig;
 import com.lw.wechatplugin.utils.CommonUtils;
 import com.lw.wechatplugin.utils.PreferencesUtils;
 import com.lw.wechatplugin.VersionParam;
@@ -60,7 +65,10 @@ public class WxHook {
 
     private LinkedBlockingDeque<WxMessageVo> blockingDeque = new LinkedBlockingDeque<>(500);
 
-    public WxHook(String versionName) {
+    private LoadPackageParam loadPackageParam;
+
+    public WxHook(LoadPackageParam loadPackageParam, Context context, String versionName) {
+        this.loadPackageParam = loadPackageParam;
         q = new e(VersionParam.WECHAT_PACKAGE_NAME, versionName);
         startMessageLooperThread();
     }
@@ -128,17 +136,19 @@ public class WxHook {
                     }else if(messageVo.getMessageType().intValue() == 1){   //文字聊天
                         if(PreferencesUtils.autoReplySet()){    //开启了文字聊天自动回复
                             log("收到文字聊天消息，跳转到聊天页面");
-                            Intent intent = new Intent();
-                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
-                            intent.putExtra("nofification_type", "new_msg_nofification");
-                            intent.putExtra("MainUI_User_Last_Msg_Type", messageVo.getMessageType());
-                            intent.putExtra("Intro_Is_Muti_Talker", false);
-                            intent.putExtra("Chat_User", messageVo.getTalker());
-                            intent.putExtra("Msg_Content", messageVo.getContent());   //自己添加的，用于回复的聊天内容
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            context.startActivity(intent);
+//                            Intent intent = new Intent();
+//                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
+//                            intent.putExtra("nofification_type", "new_msg_nofification");
+//                            intent.putExtra("MainUI_User_Last_Msg_Type", messageVo.getMessageType());
+//                            intent.putExtra("Intro_Is_Muti_Talker", false);
+//                            intent.putExtra("Chat_User", messageVo.getTalker());
+//                            intent.putExtra("Msg_Content", messageVo.getContent());   //自己添加的，用于回复的聊天内容
+//                            intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+//                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+//                            context.startActivity(intent);
+                            int value = Sender.getInstance(context).sendText("测试测试", messageVo.getTalker(), loadPackageParam.appInfo.uid);
+                            XposedBridge.log("========" + value);
                         }
                     }else if(messageVo.getMessageType().intValue() == 3){   //图片聊天，转账
                         if(PreferencesUtils.autoTransferSet()){     //开启了自动转账
@@ -520,17 +530,9 @@ public class WxHook {
         }
     }
 
-//    public static String exec(String[] arg4) {
-//        String v0_1 = "";
-//        try {
-//            java.lang.Process v1_1 = new ProcessBuilder(arg4).start();
-//            v1_1.waitFor();
-//            v0_1 = CharStreams.toString(new InputStreamReader(v1_1.getInputStream(), "utf-8"));
-//        } catch (Exception v1) {
-//            v1.printStackTrace();
-//        }
-//        return v0_1;
-//    }
+    public native int sendImage658(List<String> list, boolean z, String str, int i);
+
+    public native int sendText(String str, String str2, int i);
 
 
 }

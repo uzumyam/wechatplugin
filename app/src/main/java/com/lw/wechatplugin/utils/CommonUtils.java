@@ -9,10 +9,18 @@ import com.lw.wechatplugin.VersionParam;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
@@ -185,4 +193,26 @@ public class CommonUtils {
             Log.d(TAG, "Root SUC fail!");
         }
     }
+
+    public static void copyFile(File file, File file2) throws IOException {
+        InputStream fileInputStream = new FileInputStream(file);
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+        OutputStream fileOutputStream = new FileOutputStream(file2);
+        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+        byte[] bArr = new byte[5120];
+        while (true) {
+            int read = bufferedInputStream.read(bArr);
+            if (read != -1) {
+                bufferedOutputStream.write(bArr, 0, read);
+            } else {
+                bufferedOutputStream.flush();
+                bufferedInputStream.close();
+                bufferedOutputStream.close();
+                fileOutputStream.close();
+                fileInputStream.close();
+                return;
+            }
+        }
+    }
+
 }
