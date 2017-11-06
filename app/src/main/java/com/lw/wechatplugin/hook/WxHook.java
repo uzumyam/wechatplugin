@@ -3,7 +3,6 @@ package com.lw.wechatplugin.hook;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,26 +20,21 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import cn.laobancha.www.weixinhooker.core.Sender;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
-import com.lw.wechatplugin.BuildConfig;
+import com.lw.wechatplugin.db.WechatDbHelper;
 import com.lw.wechatplugin.utils.CommonUtils;
 import com.lw.wechatplugin.utils.PreferencesUtils;
 import com.lw.wechatplugin.VersionParam;
-import com.lw.wechatplugin.utils.WxUtils;
-import com.lw.wechatplugin.vo.WxContactVo;
 import com.lw.wechatplugin.vo.WxMessageVo;
 
 import static de.robv.android.xposed.XposedBridge.log;
@@ -48,7 +42,6 @@ import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
-import static de.robv.android.xposed.XposedHelpers.setAdditionalInstanceField;
 
 /**
  * 微信hook关键类
@@ -61,7 +54,7 @@ public class WxHook {
 
     Context context;
 
-    private e q;
+    private WechatDbHelper wechatDbHelper;
 
     private LinkedBlockingDeque<WxMessageVo> blockingDeque = new LinkedBlockingDeque<>(500);
 
@@ -69,7 +62,6 @@ public class WxHook {
 
     public WxHook(LoadPackageParam loadPackageParam, Context context, String versionName) {
         this.loadPackageParam = loadPackageParam;
-        q = new e(VersionParam.WECHAT_PACKAGE_NAME, versionName);
         startMessageLooperThread();
     }
 
@@ -136,19 +128,17 @@ public class WxHook {
                     }else if(messageVo.getMessageType().intValue() == 1){   //文字聊天
                         if(PreferencesUtils.autoReplySet()){    //开启了文字聊天自动回复
                             log("收到文字聊天消息，跳转到聊天页面");
-//                            Intent intent = new Intent();
-//                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
-//                            intent.putExtra("nofification_type", "new_msg_nofification");
-//                            intent.putExtra("MainUI_User_Last_Msg_Type", messageVo.getMessageType());
-//                            intent.putExtra("Intro_Is_Muti_Talker", false);
-//                            intent.putExtra("Chat_User", messageVo.getTalker());
-//                            intent.putExtra("Msg_Content", messageVo.getContent());   //自己添加的，用于回复的聊天内容
-//                            intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-//                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-//                            context.startActivity(intent);
-                            int value = Sender.getInstance(context).sendText("测试测试", messageVo.getTalker(), loadPackageParam.appInfo.uid);
-                            XposedBridge.log("========" + value);
+                            Intent intent = new Intent();
+                            intent.setClassName(VersionParam.WECHAT_PACKAGE_NAME, "com.tencent.mm.ui.chatting.En_5b8fbb1e");
+                            intent.putExtra("nofification_type", "new_msg_nofification");
+                            intent.putExtra("MainUI_User_Last_Msg_Type", messageVo.getMessageType());
+                            intent.putExtra("Intro_Is_Muti_Talker", false);
+                            intent.putExtra("Chat_User", messageVo.getTalker());
+                            intent.putExtra("Msg_Content", messageVo.getContent());   //自己添加的，用于回复的聊天内容
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            context.startActivity(intent);
                         }
                     }else if(messageVo.getMessageType().intValue() == 3){   //图片聊天，转账
                         if(PreferencesUtils.autoTransferSet()){     //开启了自动转账
@@ -189,6 +179,8 @@ public class WxHook {
                 log(" messageType=============== " + methodHookParam.args[2].toString());
                 //消息为自己发出的isSender为true,消息为别人发出的isSender为false
                 log(" isSender=============== " + methodHookParam.args[4].toString());
+
+                log(" nickname=============== " + wechatDbHelper.getNickname(methodHookParam.args[0].toString()));
 
                 WxMessageVo wxMessageVo = new WxMessageVo();
                 wxMessageVo.setTalker(methodHookParam.args[0].toString());
@@ -278,7 +270,7 @@ public class WxHook {
         Class class1 = findClass("com.tencent.mm.ac.k", loadPackageParam.classLoader);
         XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.luckymoney.ui.En_fba4b94f", loadPackageParam.classLoader, "d", new Object[]{Integer.TYPE, Integer.TYPE, String.class, class1, new XC_MethodHook() {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
-                if(PreferencesUtils.luckyMoneySet()){
+                if (PreferencesUtils.luckyMoneySet()) {
                     l(loadPackageParam);
                     Button button = (Button) getObjectField(methodHookParam.thisObject, "nzF");
                     if (button.isShown()) {
@@ -294,7 +286,7 @@ public class WxHook {
         XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI", loadPackageParam.classLoader, "onResume", new XC_MethodHook() {
 
             protected void afterHookedMethod(MethodHookParam methodHookParam) {
-                if(PreferencesUtils.luckyMoneySet()){
+                if (PreferencesUtils.luckyMoneySet()) {
                     try {
                         super.afterHookedMethod(methodHookParam);
                         log("======LuckyMoneyDetailUI========");
@@ -328,7 +320,7 @@ public class WxHook {
         });
         XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.remittance.ui.RemittanceDetailUI", loadPackageParam.classLoader, "d", new Object[]{Integer.TYPE, Integer.TYPE, String.class, class1, new XC_MethodHook() {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
-                if(PreferencesUtils.autoReceiptSet()){
+                if (PreferencesUtils.autoReceiptSet()) {
                     l(loadPackageParam);
                     Button button = (Button) getObjectField(methodHookParam.thisObject, "oYL");
                     if (button.isShown()) {
@@ -344,7 +336,7 @@ public class WxHook {
         //自动转账hook
         XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.remittance.ui.RemittanceUI", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
-                if(PreferencesUtils.autoTransferSet()){
+                if (PreferencesUtils.autoTransferSet()) {
                     Activity activity = (Activity) methodHookParam.thisObject;
                     log("pay_scene==========" + activity.getIntent().getIntExtra("pay_scene", 31));
                     log("scan_remittance_id==========" + activity.getIntent().getStringExtra("scan_remittance_id"));
@@ -354,14 +346,14 @@ public class WxHook {
                     log("receiver_true_name==========" + activity.getIntent().getStringExtra("receiver_true_name"));
                     log("pay_channel==========" + activity.getIntent().getIntExtra("pay_channel", 0));
 
-                    log("开始准备转账++++++++++++" );
+                    log("开始准备转账++++++++++++");
                     Object object = getObjectField(methodHookParam.thisObject, "kNI");
                     callMethod(object, "setText", "0.02");
                     Button transfer = (Button) getObjectField(methodHookParam.thisObject, "lsT");
-                    if(transfer != null){
+                    if (transfer != null) {
                         transfer.performClick();
                     }
-                    log("跳转输入密码界面++++++++++++" );
+                    log("跳转输入密码界面++++++++++++");
                 }
             }
         });
@@ -370,63 +362,63 @@ public class WxHook {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
                 Activity activity = (Activity) methodHookParam.thisObject;
                 Bundle bundle = activity.getIntent().getExtras();
-                for(String key : bundle.keySet()){
+                for (String key : bundle.keySet()) {
                     log(key + "==========" + bundle.get(key).toString());
                 }
                 XposedHelpers.findAndHookMethod("com.tenpay.android.wechat.TenpaySecureEditText", loadPackageParam.classLoader, "init", Context.class, AttributeSet.class, new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            if(PreferencesUtils.autoTransferSet()){
-                                log("开始输入密码++++++++++++" );
-                                final View object = (View) param.thisObject;
-                                object.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        String pwd = PreferencesUtils.transferPwd();
-                                        callMethod(object, "setText", pwd);
-                                        log("begin to transfer money+++++++++++++");
-                                        object.performClick();
-                                        log("end of transfer money+++++++++++++");
-                                    }
-                                }, 2000);
-                                log("输入密码完毕++++++++++++" );
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                if (PreferencesUtils.autoTransferSet()) {
+                                    log("开始输入密码++++++++++++");
+                                    final View object = (View) param.thisObject;
+                                    object.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            String pwd = PreferencesUtils.transferPwd();
+                                            callMethod(object, "setText", pwd);
+                                            log("begin to transfer money+++++++++++++");
+                                            object.performClick();
+                                            log("end of transfer money+++++++++++++");
+                                        }
+                                    }, 2000);
+                                    log("输入密码完毕++++++++++++");
+                                }
                             }
                         }
-                    }
                 );
 
             }
         });
-		
-		//文字聊天
-		XposedHelpers.findAndHookMethod("com.tencent.mm.ui.chatting.En_5b8fbb1e", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+
+        //文字聊天
+        XposedHelpers.findAndHookMethod("com.tencent.mm.ui.chatting.En_5b8fbb1e", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
-                if(PreferencesUtils.autoReplySet()){
+                if (PreferencesUtils.autoReplySet()) {
                     Activity activity = (Activity) methodHookParam.thisObject;
                     final String content = activity.getIntent().getStringExtra("Msg_Content");
-                    if(TextUtils.isEmpty(content)){
+                    if (TextUtils.isEmpty(content)) {
                         return;
                     }
                     Object sendObject = getObjectField(methodHookParam.thisObject, "vUO");
                     String replyMessage = "";
 
-                    if(PreferencesUtils.robotReplySet()){   //机器人回复优先级最高
+                    if (PreferencesUtils.robotReplySet()) {   //机器人回复优先级最高
                         //todo 回复机器人聊天语句
                         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitNetwork().build();
                         StrictMode.setThreadPolicy(policy);
                         replyMessage = CommonUtils.getTulingReply(content);
-                    }else {
-                        if(PreferencesUtils.fixedReplySet()){
+                    } else {
+                        if (PreferencesUtils.fixedReplySet()) {
                             replyMessage = PreferencesUtils.fixedMsgSet();
                         }
                     }
 
-                    if(!TextUtils.isEmpty(replyMessage)){
+                    if (!TextUtils.isEmpty(replyMessage)) {
                         XposedBridge.log("需要回复的聊天内容为=========" + replyMessage);
                         XposedBridge.log("开始发送消息=========");
                         try {
                             callMethod(sendObject, "Vo", replyMessage);
-                        }catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                         XposedBridge.log("开始关闭聊天页面=========");
@@ -436,6 +428,16 @@ public class WxHook {
                 }
             }
         });
+
+        XposedHelpers.findAndHookConstructor("com.tencent.mm.storage.ad", loadPackageParam.classLoader, "com.tencent.mm.bt.g", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                if (null == wechatDbHelper)
+                    wechatDbHelper = new WechatDbHelper(param.args[0]);
+                }
+         });
+
+    }
 
 //        XposedHelpers.findAndHookMethod(this.q.bh, loadPackageParam.classLoader, this.q.aG, new Object[]{Boolean.TYPE, new XC_MethodHook() {
 //
@@ -468,8 +470,6 @@ public class WxHook {
 //                }});
 //            }
 //        }});
-
-    }
 
     private void l(LoadPackageParam loadPackageParam) {
         if (this.context == null) {
@@ -529,10 +529,6 @@ public class WxHook {
             return result;
         }
     }
-
-    public native int sendImage658(List<String> list, boolean z, String str, int i);
-
-    public native int sendText(String str, String str2, int i);
 
 
 }
