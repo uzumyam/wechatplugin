@@ -1,5 +1,8 @@
 package com.lw.wechatplugin;
 
+import com.lw.wechatplugin.utils.CommonUtils;
+import com.lw.wechatplugin.vo.RechargeRspVo;
+
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,9 +13,12 @@ import java.security.NoSuchAlgorithmException;
 
 public class DbTest {
     public static void main(String[] args){
-        String imei = "864517030958738";
-        String uin = "151471781";
-        System.out.println(md5(imei + uin).substring(0, 7));
+//        String imei = "864517030958738";
+//        String uin = "151471781";
+//        System.out.println(md5(imei + uin).substring(0, 7));
+        String content = CommonUtils.httpGet("http://123.207.29.254:8080/WS/ExchangeInterface.ashx?action=Recharge&nickName=%E5%B0%86%E5%86%9B&gameId=614283&rechargeMoney=&strInsurePass=21218CCA77804D2BA1922C33E0151105");
+        RechargeRspVo rechargeRspVo = CommonUtils.getRechargeRsp(content);
+        System.out.println(rechargeRspVo.toString());
     }
 
     public static String md5(String content){

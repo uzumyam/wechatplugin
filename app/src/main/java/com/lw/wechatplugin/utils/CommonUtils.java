@@ -5,6 +5,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.lw.wechatplugin.VersionParam;
+import com.lw.wechatplugin.vo.RechargeRspVo;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -88,6 +89,37 @@ public class CommonUtils {
         return result;
     }
 
+    public static String httpGet(String urlGet){
+        BufferedReader bufferedReader = null;
+        String result = "";
+        try {
+            URL url = new URL(urlGet);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Accept", "application/json");    //设置接收的数据格式
+            connection.setRequestMethod("GET");
+            connection.setDoOutput(false);
+            connection.setDoInput(true);
+
+            connection.connect();
+            bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            result = bufferedReader.readLine();
+            return result;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if(bufferedReader != null){
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return result;
+    }
+
     /**
      * 图灵机器人回复
      * @param info
@@ -115,6 +147,26 @@ public class CommonUtils {
             e.printStackTrace();
         }
         return "抱歉，暂时不能回复您";
+    }
+
+    /**
+     * 获取充值接口
+     * @param content
+     * @return
+     */
+    public static RechargeRspVo getRechargeRsp(String content){
+        try {
+            JSONObject jsonObject = new JSONObject(content);
+            JSONObject respondObj = jsonObject.optJSONObject("data");
+            RechargeRspVo rechargeRspVo = new RechargeRspVo();
+            rechargeRspVo.setValid(respondObj.getBoolean("valid"));
+            rechargeRspVo.setContent(respondObj.getString("Content"));
+            rechargeRspVo.setEntity(respondObj.getString("Entity"));
+            return rechargeRspVo;
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static String md5(String content){

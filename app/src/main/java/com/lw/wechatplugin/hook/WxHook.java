@@ -391,43 +391,38 @@ public class WxHook {
         });
 
         //文字聊天
-        XposedHelpers.findAndHookMethod("com.tencent.mm.ui.chatting.En_5b8fbb1e", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+        XposedHelpers.findAndHookMethod("com.tencent.mm.ui.chatting.En_5b8fbb1e.a", loadPackageParam.classLoader, "onActivityCreated", new Object[]{Bundle.class, new XC_MethodHook() {
             protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
                 if (PreferencesUtils.autoReplySet()) {
-                    Activity activity = (Activity) methodHookParam.thisObject;
-                    final String content = activity.getIntent().getStringExtra("Msg_Content");
-                    if (TextUtils.isEmpty(content)) {
-                        return;
-                    }
-                    Object sendObject = getObjectField(methodHookParam.thisObject, "vUO");
-                    String replyMessage = "";
-
-                    if (PreferencesUtils.robotReplySet()) {   //机器人回复优先级最高
-                        //todo 回复机器人聊天语句
-                        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitNetwork().build();
-                        StrictMode.setThreadPolicy(policy);
-                        replyMessage = CommonUtils.getTulingReply(content);
-                    } else {
-                        if (PreferencesUtils.fixedReplySet()) {
+                    Activity activity = (Activity) XposedHelpers.callMethod(methodHookParam.thisObject, "bTW", new Object[0]);
+                    String content = activity.getIntent().getStringExtra("Msg_Content");
+                    if (!TextUtils.isEmpty(content)) {
+                        Object sendObject = XposedHelpers.getObjectField(methodHookParam.thisObject, "wgk");
+                        String replyMessage = "";
+                        if (PreferencesUtils.robotReplySet()) {
+                            //todo 回复机器人聊天语句
+                            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitNetwork().build();
+                            StrictMode.setThreadPolicy(policy);
+                            replyMessage = CommonUtils.getTulingReply(content);
+                        } else if (PreferencesUtils.fixedReplySet()) {
                             replyMessage = PreferencesUtils.fixedMsgSet();
                         }
-                    }
-
-                    if (!TextUtils.isEmpty(replyMessage)) {
-                        XposedBridge.log("需要回复的聊天内容为=========" + replyMessage);
-                        XposedBridge.log("开始发送消息=========");
-                        try {
-                            callMethod(sendObject, "Vo", replyMessage);
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                        if (!TextUtils.isEmpty(replyMessage)) {
+                            XposedBridge.log("需要回复的聊天内容为=========" + replyMessage);
+                            XposedBridge.log("开始发送消息=========");
+                            try {
+                                XposedHelpers.callMethod(sendObject, "Bh", new Object[]{replyMessage});
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            XposedBridge.log("开始关闭聊天页面=========");
+                            XposedHelpers.callMethod(activity, "finish", new Object[0]);
+                            XposedBridge.log("发送消息结束=========");
                         }
-                        XposedBridge.log("开始关闭聊天页面=========");
-                        callMethod(sendObject, "finish", new Object[0]);
-                        XposedBridge.log("发送消息结束=========");
                     }
                 }
             }
-        });
+        }});
 
         XposedHelpers.findAndHookConstructor("com.tencent.mm.storage.ad", loadPackageParam.classLoader, "com.tencent.mm.bt.g", new XC_MethodHook() {
             @Override
@@ -436,40 +431,7 @@ public class WxHook {
                     wechatDbHelper = new WechatDbHelper(param.args[0]);
                 }
          });
-
     }
-
-//        XposedHelpers.findAndHookMethod(this.q.bh, loadPackageParam.classLoader, this.q.aG, new Object[]{Boolean.TYPE, new XC_MethodHook() {
-//
-//            protected void afterHookedMethod(MethodHookParam methodHookParam) {
-//
-//                XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyDetailUI", loadPackageParam.classLoader, "onCreate", new Object[]{Bundle.class, new XC_MethodHook() {
-//
-//                    protected void afterHookedMethod(MethodHookParam methodHookParam) {
-//                        try {
-//                            super.afterHookedMethod(methodHookParam);
-//                            XposedBridge.log("======LuckyMoneyDetailUI========");
-//                        } catch (Throwable throwable) {
-//                            throwable.printStackTrace();
-//                        }
-//                    }
-//                }});
-//                Class findClass = XposedHelpers.findClass("com.tencent.mm.ac.k", loadPackageParam.classLoader);
-//                XposedHelpers.findAndHookMethod("com.tencent.mm.plugin.luckymoney.ui.En_fba4b94f", loadPackageParam.classLoader, "d", new Object[]{Integer.TYPE, Integer.TYPE, String.class, findClass, new XC_MethodHook() {
-//                    protected void afterHookedMethod(MethodHookParam methodHookParam) throws InterruptedException {
-//                        l(loadPackageParam);
-//                        Button button = (Button) XposedHelpers.getObjectField(methodHookParam.thisObject, "nzF");
-//                        if (button.isShown()) {
-//                            Thread.sleep((long) new Random().nextInt(500));
-//                            button.performClick();
-//                        } else {
-//                            XposedHelpers.callMethod(methodHookParam.thisObject, "finish", new Object[0]);
-//                            Toast.makeText(context, "(^O^)", Toast.LENGTH_SHORT).show();
-//                        }
-//                    }
-//                }});
-//            }
-//        }});
 
     private void l(LoadPackageParam loadPackageParam) {
         if (this.context == null) {
